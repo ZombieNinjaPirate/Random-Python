@@ -1,4 +1,4 @@
-shooting-with-live-rounds
+Random Python
 =========================
 
-This might actually be used in live situations
+Some random python projects i've made that are working(ish)
