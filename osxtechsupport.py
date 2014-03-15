@@ -17,12 +17,6 @@ import time
 from os.path import expanduser
 
 
-#
-#   time stamp on output log file
-#
-#
-#
-
 def parse_args():
     """Command line definitions """
     parser = argparse.ArgumentParser(description='''Searches trough log files for potential
