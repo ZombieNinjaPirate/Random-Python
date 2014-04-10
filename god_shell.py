@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-   Copyright (c) 2014, Black September
+   Copyright (c) 2014, Are Hansen
 
    All rights reserved.
  
