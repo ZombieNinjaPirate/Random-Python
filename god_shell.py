@@ -27,7 +27,7 @@
    THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-__author__ = 'Black September'
+__author__ = 'Are Hansen'
 __date__ = '2014, Jan 1'
 __version__ = '1.1.0'
 
@@ -78,7 +78,7 @@ def interactive_startup():
     os.system('/usr/bin/clear')
     print('''
     +------------------------------------------------------------+
-    |            God Shell - (C) 2014 Black September            |
+    |               God Shell - (C) 2014 Are Hansen              |
     +------------------------------------------------------------+
 
               Type HELP to see view interactive options.
