@@ -2,7 +2,7 @@
 
 
 """
-   Copyright (c) 2014, Black September
+   Copyright (c) 2014, Are Hansen
 
    All rights reserved.
  
@@ -31,7 +31,7 @@
 """
 
 
-__author__ = 'Black September'
+__author__ = 'Are Hansen'
 __date__ = '2014, March 13'
 __version__ = '1.0.2'
 
