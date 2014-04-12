@@ -59,27 +59,22 @@ def parse_args():
     rec.add_argument('-D', dest='send_to', help='Recipient(s) (Required)', required=True,
                      nargs='+')
 
-    body = parser.add_argument_group('- Message body (One is Required)')
-    body.add_argument('-Bs', dest='body_str', help='Body (string)', type=str)
-    body.add_argument('-Bf', dest='body_file', help='Body (/path/to/file)')
+    body = parser.add_argument_group('- Message body')
+    body.add_argument('-Bf', dest='body_file', help='Body (/path/to/file)', required=True)
     
     args = parser.parse_args()
     
     return args
 
 
-def send_mail(sendf, uname, subj, smtps, smtpp, pwd, sendt, body, btype):
+def send_mail(sendf, uname, subj, smtps, smtpp, pwd, sendt, body):
     """Send mail using the provided variables. """
-    if btype == 'FILE':
-        try:
-            fp = open(body, 'rb')
-            msg = MIMEText(fp.read())
-            fp.close()
-        except IOError:
-            sys.exit(1)
-
-    if btype == 'STR':
-        msg = body
+    try:
+        fp = open(body, 'rb')
+        msg = MIMEText(fp.read())
+        fp.close()
+    except IOError:
+        sys.exit(1)
 
     myemail = sendf
     myuname = uname
@@ -125,25 +120,11 @@ def check_args(args):
     smtp_port = args.smtp_port
     passwd = args.passwd
     send_to = args.send_to
-    body_str = args.body_str
     body_file = args.body_file
 
-    if not body_str and not body_file:
-        print("ERROR: You are required to use either '-Bs' or '-Bf'!")
-        sys.exit(1)
-
-    if body_str and body_file:
-        print("ERROR: You can only specify either '-Bs' or '-Bf', not both of them!")
-        sys.exit(1)
-
-    if body_str and not body_file:
-        body = body_str
-        btype = 'STR'
-
-    if body_file and not body_str:
+    if body_file:
         if path.isfile(body_file) and access(body_file, R_OK):
             body = body_file
-            btype = 'FILE'
         else:
             print('\nERROR: Unable to read/find "{0}"\n'.format(body_file))
             sys.exit(1)
@@ -154,7 +135,7 @@ def check_args(args):
     if subject:
         subject = ' '.join(subject)
 
-    send_mail(send_from, user_name, subject, smtp_srv, smtp_port, passwd, send_to, body, btype)
+    send_mail(send_from, user_name, subject, smtp_srv, smtp_port, passwd, send_to, body)
 
 
 def main():
