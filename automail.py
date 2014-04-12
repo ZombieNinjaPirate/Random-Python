@@ -29,10 +29,6 @@
 
 """
 
-"""
-    Send email using the credentials of an existing account.
-    Allows for sending the contents of a file or a string.
-"""
 
 __author__ = 'Are Hansen'
 __date__ = '2014, 3 February'
@@ -53,13 +49,15 @@ def parse_args():
     src = parser.add_argument_group('- Source')
     src.add_argument('-S', dest='send_from', help='Send from (Required)', required=True)
     src.add_argument('-A', dest='user_name', help='Username (default: first part of email)')
-    src.add_argument('-U', dest='subject', help='Mail subject (Required)', required=True)
+    src.add_argument('-U', dest='subject', help='Mail subject (Required)', required=True,
+                     nargs='+')
     src.add_argument('-M', dest='smtp_srv', help='SMTP server (Required)', required=True)
     src.add_argument('-P', dest='smtp_port', help='SMTP port (Required)', required=True)
     src.add_argument('-W', dest='passwd', help='Senders password (Required)', required=True)
 
     rec = parser.add_argument_group('- Recipient')
-    rec.add_argument('-D', dest='send_to', help='Recipient (Required)', required=True)
+    rec.add_argument('-D', dest='send_to', help='Recipient(s) (Required)', required=True,
+                     nargs='+')
 
     body = parser.add_argument_group('- Message body (One is Required)')
     body.add_argument('-Bs', dest='body_str', help='Body (string)', type=str)
@@ -113,8 +111,6 @@ def send_mail(sendf, uname, subj, smtps, smtpp, pwd, sendt, body, btype):
 
     print('Authentication to {0} as {1}: OK'.format(smtps, myuname))
 
-    print myemail
-    print [toemail]
     print('Sending mail...')
     s.sendmail(myemail, toemail, msg.as_string())
     s.quit()
@@ -154,6 +150,9 @@ def check_args(args):
 
     if not user_name:
         user_name = send_from.split('@')[0]
+
+    if subject:
+        subject = ' '.join(subject)
 
     send_mail(send_from, user_name, subject, smtp_srv, smtp_port, passwd, send_to, body, btype)
 
