@@ -3,6 +3,20 @@
 
 
 """
+  **************************************************************************************************
+  
+  BUG TRACKER:
+
+  Version 0.0.3
+  
+  #1 --- 2014.06.22:
+  The script does not check if the same username is used multiple times.
+  
+  Resolve:
+  Have the script check for similar usernames, if found, append number to the end of it
+
+  **************************************************************************************************
+
   Reads file with USERNAME/PASSWORD. The USERNAME and PASSWORD will be used to generate a 'newusers'
   compatible format. The output could be piped directly to 'newusers' or to a file that can be read
   by 'newusers' later.
@@ -44,17 +58,69 @@ __date__ = '2014, May 11'
 __version__ = '0.0.3'
 
 
+import argparse
 import sys
 
-users = []
-with open(sys.argv[1], 'rU') as accounts:
-    for account in accounts.readlines():
-        	users.append(account)
 
-UID = sys.argv[2]
-for user in users:
-	username = user.split('/')[0].rstrip()
-	password = user.split('/')[1].rstrip()
-	print '{0}:{1}:{2}:{2}:{0}:/home/{0}:/bin/bash'.format(username, password, UID)
-	UID = UID + 1
+def parse_args():
+    """Command line options."""
+    parser = argparse.ArgumentParser(description='Cenerate bulk Linux accounts')
 
+    files = parser.add_argument_group('- Files')
+    files.add_argument('-I', dest='infile', help='Delimiter separated user/passwd file.',
+                       required=True, type=argparse.FileType('rt'))
+    files.add_argument('-D', dest='delim', help='Column separator (default: "/")', type=str,
+                        default='/')
+
+    account = parser.add_argument_group('- Account')
+    account.add_argument('-U', dest='uid', help='Starting number for user UID/GID', required=True,
+                          type=int)
+
+    args = parser.parse_args()
+    
+    return args
+
+
+def generate_accounts(usr_lines, delim, uid):
+    """
+    Generate passwd formated output that can be handed off to 'newusers'
+    """
+    lnumb = 1
+
+    for user in usr_lines:
+        try:
+            username = user.split(delim)[0].strip()
+        except IndexError:
+            print '\nERROR: Encountered and error on line {0} in file.\n'.format(lnumb)
+            sys.exit(0)
+
+        try:
+            password = user.split(delim)[1].strip()
+        except IndexError:
+            print '\nERROR: Encountered and error on line {0} in file.\n'.format(lnumb)
+            sys.exit(0)
+
+        print '{0}:{1}:{2}:{2}:{0}:/home/{0}:/bin/bash'.format(username, password, uid)
+ 
+        uid = uid + 1
+        lnumb = lnumb + 1
+
+
+def check_args(args):
+    """Command line parsing. """
+    output = []
+
+    for line in args.infile:
+        output.append(line.rstrip())
+
+    generate_accounts(output, args.delim, args.uid)
+
+
+def main():
+    """Main function. """
+    args = parse_args()
+    check_args(args)
+
+
+if __name__ == '__main__':
+    main()
