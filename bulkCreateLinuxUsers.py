@@ -2,28 +2,19 @@
 # -*- coding: utf-8 -*-
 
 
+__author__ = 'Are Hansen'
+__date__ = '2014, May 11'
+__version__ = '0.0.4'
+
+
 """
-  **************************************************************************************************
-  
-  BUG TRACKER:
+   Reads file with USERNAME/PASSWORD. The USERNAME and PASSWORD will be used to generate a 'newusers'
+   compatible format. The output could be piped directly to 'newusers' or to a file that can be read
+   by 'newusers' later.
 
-  Version 0.0.3
-  
-  #1 --- 2014.06.22:
-  The script does not check if the same username is used multiple times.
-  
-  Resolve:
-  Have the script check for similar usernames, if found, append number to the end of it
-
-  **************************************************************************************************
-
-  Reads file with USERNAME/PASSWORD. The USERNAME and PASSWORD will be used to generate a 'newusers'
-  compatible format. The output could be piped directly to 'newusers' or to a file that can be read
-  by 'newusers' later.
-
-  The script takes two arguments.
-  - 1: Path to the USERNAME/PASSWORD file
-  - 2: Starting UID/GID, this is incremented by one for each user account.
+   The script takes two arguments.
+   - 1: Path to the USERNAME/PASSWORD file
+   - 2: Starting UID/GID, this is incremented by one for each user account.
 """
 
 """
@@ -53,12 +44,8 @@
 """
 
 
-__author__ = 'Are Hansen'
-__date__ = '2014, May 11'
-__version__ = '0.0.3'
-
-
 import argparse
+import random
 import sys
 
 
@@ -82,28 +69,27 @@ def parse_args():
 
 
 def generate_accounts(usr_lines, delim, uid):
-    """
-    Generate passwd formated output that can be handed off to 'newusers'
-    """
-    lnumb = 1
+    """Check and resolve issues with duplicate names. Generate passwd formated output that can be
+    handed off to 'newusers'. """
+    addstr = ['13', '29', '37', '49', '56', '68', '72', '18', '19', '007', '666', '22', '82', '404',
+              '1337', '76', '77', '14', '2014', '1999', '0', '4', '111', '88', '1', '2', '3', '5']
 
-    for user in usr_lines:
-        try:
-            username = user.split(delim)[0].strip()
-        except IndexError:
-            print '\nERROR: Encountered and error on line {0} in file.\n'.format(lnumb)
-            sys.exit(0)
+    user_list = {}
 
-        try:
-            password = user.split(delim)[1].strip()
-        except IndexError:
-            print '\nERROR: Encountered and error on line {0} in file.\n'.format(lnumb)
-            sys.exit(0)
+    for item in usr_lines:
+        group = item.split(delim)[0].strip()
+        user = item.split(delim)[1].strip()
+        passwd = item.split(delim)[2].strip()
 
-        print '{0}:{1}:{2}:{2}:{0}:/home/{0}:/bin/bash'.format(username, password, uid)
- 
+        if  user in user_list:
+            multi = '{0}{1}'.format(user, random.choice(addstr))
+            user_list[multi] = group, passwd
+        else:
+            user_list[user] = group, passwd
+
+    for key, value in user_list.items():
+        print '{0}:{1}:{3}:{3}:{2}:/home/{0}:/bin/bash'.format(key, value[1], value[0].lower(), uid)
         uid = uid + 1
-        lnumb = lnumb + 1
 
 
 def check_args(args):
