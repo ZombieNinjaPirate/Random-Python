@@ -36,10 +36,10 @@ __version__ = '0.0.6'
 
 #
 #   DEVELOPMENT NOTES:
-#   -- 140624 --
-#   - add and arument that allows the user to decompress the UPX files into a separate directory
-#   - implement elftools for further analysiz
-#   - search for other artefacts
+#   -- 140623 --
+#   - implement elftools for further decoding
+#   - search for hardcoded IP addresses in the decompressed binaries
+#   - search for system paths and commands in the decompressed binraies
 #
 
 
@@ -47,8 +47,9 @@ import argparse
 import glob
 import hashlib
 import os
-import sys
 import re
+import sys
+import time
 from os import path, access, R_OK
 
 
@@ -56,9 +57,14 @@ def parse_args():
     """Defines the command line arguments. """
     parser = argparse.ArgumentParser('Checks for UPX compressed binaries')
     
-    location = parser.add_argument_group('- File locations')
-    location.add_argument('-T', dest='tdir', help='Target directory', required=True)
+    local = parser.add_argument_group('- File locations')
+    local.add_argument('-T', dest='tdir', help='Target directory', required=True)
+    local.add_argument('-D', dest='ddir', help='Decompress directory (default: UPX_yymmdd_hhmmss)',
+                        default=time.strftime('UPX_%y%m%d_%H%M%S'))
 
+    decomp = parser.add_argument_group('- Decompress UPX')
+    decomp.add_argument('-X', dest='deco', help='Decompress the UPX files', action='store_true')
+    
     args = parser.parse_args()
 
     return args
@@ -91,7 +97,7 @@ def check_files(binary_list):
 
         with open(binary, 'rU') as upxtest:
             for upx in upxtest.readlines():
-                if re.search(' upx ', upx, re.IGNORECASE):
+                if re.search('the UPX executable packer', upx):
                     if binary not in upx_files:
                         upx_files.append('{0}'.format(binary))
     
@@ -128,44 +134,82 @@ def md5sum_upx(upx_list):
     return md5_dict
 
 
-def summary(tdir, allfiles, upxfiles, md5ofupx):
+def summary(tdir, allfiles, upxfiles, md5ofupx, fid):
     """Summarize the findings."""
     head = '-' * 50
+
     print head
     print 'Files analyzed: {0}'.format(len(allfiles))
     print 'UPX compressed: {0}'.format(len(upxfiles))
 
     fingerp = []
+
     for key in md5ofupx.keys():
         fingerp.append(key)
 
-    print 'Unique files: {0}'.format(len(fingerp))
-
+    print 'Unique UPX hash: {0}'.format(len(fingerp))
     print head,'\n'
+
+    upxdecom_list = []
 
     for key, value in md5ofupx.items():
         print '- {0}:'.format(key)
+
+        if sorted(value)[0] not in upxdecom_list:
+                upxdecom_list.append(sorted(value)[0])
+        
         for mfile in sorted(value):
             print mfile
+        
         print ''
 
     print head
 
+    if fid == 'decompress':
+        return upxdecom_list
+
+
+def decompress_upx(upx_list, dest_dir):
+    """Decompress the UPX files. """
+    head = '-' * 50
+
+    if not os.path.isdir(dest_dir):
+        os.mkdir(dest_dir)
+
+    print '\n        File size         Ratio      Format      Name'
+    print '   --------------------   ------   -----------   -----------'
+    
+    for upx in upx_list:
+        dodecomp = '/usr/bin/upx -q -d {0} -o {1}/UPX-{0} | grep "<-"'.format(upx, dest_dir, upx)
+        os.system(dodecomp)
+
+    print '\n{0}'.format(head)
+
 
 def process_args(args):
-    """Process the command line arguments. """
+    """Process the command line arguments."""
     if args.tdir:
         if not os.path.isdir(args.tdir):
             print 'ERROR: {0} does not appear to exist!'.format(args.tdir)
             sys.exit(1)
 
-    allfiles = find_files(args.tdir)
-    upxfiles = check_files(allfiles)
-    md5ofupx = md5sum_upx(upxfiles)
-    summary(args.tdir, allfiles, upxfiles, md5ofupx)
+    if not args.deco:
+        allfiles = find_files(args.tdir)
+        upxfiles = check_files(allfiles)
+        md5ofupx = md5sum_upx(upxfiles)
+        summary(args.tdir, allfiles, upxfiles, md5ofupx, 'summary')
+
+    if args.deco:
+        allfiles = find_files(args.tdir)
+        upxfiles = check_files(allfiles)
+        md5ofupx = md5sum_upx(upxfiles)
+        decolist = summary(args.tdir, allfiles, upxfiles, md5ofupx, 'decompress')
+        decompress_upx(decolist, args.ddir)
+
+
 
 def main():
-    """Do what Main does best..."""
+    """Do what Main does best."""
     args = parse_args()
     process_args(args)
 
