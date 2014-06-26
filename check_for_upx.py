@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 
+#
+#     THIS CODE IS NOT COMPLETE !!!!
+#
+
 """Preforms very simple static analyzis of malware binaries."""
 
 """
