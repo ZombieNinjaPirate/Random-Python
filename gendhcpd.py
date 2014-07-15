@@ -48,11 +48,12 @@
 
 __author__ = 'Are Hansen'
 __date__ = '2014, July 14'
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 
-import sys
 import os
+import sys
+import re
 try:
     import ipaddr
 except ImportError:
@@ -84,10 +85,9 @@ subnet 10.199.115.0 netmask 255.255.255.0 {
 """
 def assign_calues():
     """Assign DHCP values. """
-    valid_ip = []
-
+    print '\nNetwork configuration\n'
     while True:
-        ipcidr = raw_input('Enter IPv4/CIDR: ')
+        ipcidr = raw_input('- Enter IPv4/CIDR: ')
         ipv4 = ipcidr.split('/')[0]
         cidr = ipcidr.split('/')[1]
 
@@ -102,36 +102,94 @@ def assign_calues():
     # Setup the IPv4 address for validation
     check_ips = [ipv4]
 
-    dnssrv = raw_input('Enter DNS server(s): ')
+    dnssrv = raw_input('- Enter DNS server(s): ')
+    print '(Multiple DNS servers as space separated list)'
 
     # Append the DNS server(s) to the check list
     for dns in dnssrv.split(' '):
         check_ips.append(dns)
 
+    valid_ip = []
     # Pass the elements in the check list off for validation
     for ips in check_ips:
         validip = check_ipv4(ips)
         # Append the returned IPv4 address to the valid_ip list 
         valid_ip.append(validip)
 
-    # Get the default-lease-time
+    # Show default lease times.
     print '\nDHCP lease settings:'
     print 'Default values:'
-    print '- default-lease-time:  600'
-    print '- max-lease-time:     7200\n'
+    print 'default-lease-time:  600'
+    print 'max-lease-time:     7200'
     print 'Press ENTER to keep default settings.\n'
 
-    dltime = raw_input('Default lease time: ')
+    # Get default-lease-time
+    dltime = raw_input('- Default lease time: ')
 
-    if dltime == '':
+    if len(dltime) == 0:
         dltime = '600'
 
-    mltime = raw_input('Max lease time: ')
+    # Get max-lease-time
+    mltime = raw_input('- Max lease time: ')
 
-    if mltime == '':
+    if len(mltime) == 0:
         mltime = '7200'
 
-    print valid_ip, cidr, dltime, mltime
+    # Get domain-name.
+    while True:
+        dname = raw_input('- Domain name: ')
+
+        if len(dname) < 2:
+            print 'You have to enter a longer doamin name!'
+
+        if len(dname) >= 2:
+            break
+
+    staticip = []
+    # Get static IPv4 and MAC address
+    print '\nStatic IPv4 addresse(s):'
+    while True:
+        # Get static IPv4 address,
+        host_ip = raw_input('- IPv4: ')
+        # validate IPv4.
+        valid_host_ip = check_ipv4(host_ip) 
+
+        # Get MAC address of static host,
+        host_mac = raw_input('- MAC: ')
+        # validate MAC address.
+        valid_host_mac = check_mac(host_mac)
+
+        #
+        #   CHECK FOR PREVIOUSLY USED IP AND MAC ADDRESSES
+        #
+        staticip.append('{0} {1}'.format(valid_host_ip, valid_host_mac))
+
+        print staticip
+        verify = raw_input('\nAdd another static IPv4 address? Y/N ')
+
+        if verify == 'Y':
+            pass
+
+        if verify == 'N':
+            break
+
+        if verify != 'Y' and verify != 'N':
+            print 'Please enter "Y" for Yes or "N" for No'
+
+    print valid_ip, cidr, dltime, mltime, dname
+
+
+def check_mac(macadd):
+    """Check for valid MAC address. """
+    while True:
+        if not re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", macadd.lower()):
+            print 'MAC address "{0}" is not valid!'.format(macadd)
+            macadd = raw_input('- Host #{0} MAC: '.format(hostnr))
+
+        if re.match("[0-9a-f]{2}([-:])[0-9a-f]{2}(\\1[0-9a-f]{2}){4}$", macadd.lower()):
+            break
+
+    return macadd
 
 
 def check_ipv4(ipv4):
