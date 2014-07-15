@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 
 """Generate the dhcpd.conf file. """
@@ -6,11 +6,19 @@
 
 #
 #   DEVELOPMENT NOTES:
+#   - assign DNS
+#   - assign domain name
+#   - show default values, let user accept or change
+#      - assign default lease
+#      - assign max lease time 
+#   - assign DHCP range by start and end IP ||
+#     assign DHCP range by number of hosts
 #   - assign static IP's by MAC address
+#       - assign host name
 #       - verify MAC address validity
 #       - assign multiple static IP's
 #   - output in dhcpd.conf format
-#   - wait for user to confirm configuration
+#   - if user confirms configuration
 #   - write output to file
 #
 
@@ -44,10 +52,11 @@
 
 __author__ = 'Are Hansen'
 __date__ = '2014, July 14'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 
 import sys
+import os
 try:
     import ipaddr
 except ImportError:
@@ -62,7 +71,7 @@ def check_ipv4():
         ipv4 = ipcidr.split('/')[0]
         cidr = ipcidr.split('/')[1]
         try:
-            ip = ipaddr.IPAddress(ipv4)
+            ip = ipaddr.ip_address(ipv4)
             break
         except ValueError:
             print '[!] - IPv4 {0} is not valid!'.format(ipv4)
@@ -88,12 +97,29 @@ def network_summary(ipcidr):
     for i in range(brange):
         broad[3 - i/8] = broad[3 - i/8] + (1 << (i % 8))
 
-    print 'Network:   {0}'.format('.'.join(map(str, net)))
-    print 'Gateway:   {0}.1'.format('.'.join(map(str, net[0:3])))
-    print 'First IP:  {0}.2'.format('.'.join(map(str, net[0:3])))
-    print 'Last IP:   {0}.{1}'.format('.'.join(map(str, broad[0:3])), int(broad[3]) - 1)
-    print 'Broadcast: {0}'.format('.'.join(map(str, broad)))
-    print 'Netmask:   {0}'.format('.'.join(map(str, mask)))
+    network = '.'.join(map(str, net))
+    gateway = '{0}.1'.format('.'.join(map(str, net[0:3])))
+    firstip = '{0}.2'.format('.'.join(map(str, net[0:3])))
+    finalip = '{0}.{1}'.format('.'.join(map(str, broad[0:3])), int(broad[3]) - 1)
+    brdcast = '{0}'.format('.'.join(map(str, broad)))
+    netmask = '{0}'.format('.'.join(map(str, mask)))
+
+    print 'Network:   {0}'.format(network)
+    print 'Gateway:   {0}'.format(gateway)
+    print 'First IP:  {0}'.format(firstip)
+    print 'Last IP:   {0}'.format(finalip)
+    print 'Broadcast: {0}'.format(brdcast)
+    print 'Netmask:   {0}'.format(netmask)
+
+    while True:
+        verify = raw_input('\nIs this the correct network settings? Y/N ')
+
+        if verify == 'Y':
+            break
+
+        if verify == 'N':
+            python = sys.executable
+            os.execl(python, python, * sys.argv)
 
 
 def main():
