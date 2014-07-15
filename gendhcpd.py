@@ -52,7 +52,7 @@
 
 __author__ = 'Are Hansen'
 __date__ = '2014, July 14'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 
 import sys
@@ -64,19 +64,39 @@ except ImportError:
     sys.exit(1)
 
 
-def check_ipv4():
-    """Verifies that the ipv4 is valid. """
-    while True:
-        ipcidr = raw_input('Enter IPv4/CIDR: ' )
-        ipv4 = ipcidr.split('/')[0]
-        cidr = ipcidr.split('/')[1]
-        try:
-            ip = ipaddr.ip_address(ipv4)
-            break
-        except ValueError:
-            print '[!] - IPv4 {0} is not valid!'.format(ipv4)
+def check_ipv4(ip_list):
+    """Checks for valid ipv4 addresses. The ip_list should be of len 2. The first index should be
+    a CIDR formatted IP address. The second index should be one or more ipv4 adresses that will be
+    used as DNS servers. The function will extract the plain ipv4 addresses and itterate over them.
+    In the event of one, or more, ipv4 addresses being flagged as invalid the user will be forced to
+    enter that IP address once more. When the function has verified that all ipv4 addresses are
+    valid they are returned from the function in the valid_ip list after the CIDR has been appended
+    as the last index of that list."""
+    # Separate IPv4 and CIDR and add the IPv4 address to the ip_check list
+    ipv4 = ip_list[0].split('/')[0]
+    cidr = ip_list[0].split('/')[1]
+    ip_check = [ipv4]
 
-    return ipv4, cidr
+    # Itterate trough the IPv4 addresses in ip_list[1] and appends them to the ip_check list.
+    for dns in ip_list[1].split(' '):
+        ip_check.append(dns)
+
+    count = 0
+    while count < len(ip_check):
+        for check in ip_check:
+            try:
+                ip = ipaddr.ip_address(check)
+                count = count + 1
+            except ValueError:
+                # If ValueError is raised
+                print '[!] - IPv4 {0} is not valid!'.format(check)
+                # Request a valid IPv4 address from the user
+                newip = raw_input('Enter valid IP: ')
+                # and replace the old value with the new IPv4 address before running the loop again
+                ip_check[ip_check.index(check)] = newip
+                count = 0
+
+    print ip_check
 
 
 def network_summary(ipcidr):
@@ -115,17 +135,48 @@ def network_summary(ipcidr):
         verify = raw_input('\nIs this the correct network settings? Y/N ')
 
         if verify == 'Y':
+            netsum = [network, gateway, firstip, finalip, brdcast, netmask]
             break
 
         if verify == 'N':
             python = sys.executable
             os.execl(python, python, * sys.argv)
 
+        if verify != 'Y' and verify != 'N':
+            print 'Please enter "Y" for Yes or "N" for No'
+
+    return netsum
+
+"""
+authoritative;
+ddns-update-style none;
+log-facility local7;
+default-lease-time 600;
+max-lease-time 7200;
+
+option domain-name "internal";
+option domain-name-servers 8.8.8.8;
+option subnet-mask 255.255.255.0;
+option broadcast-address 10.199.115.255;
+option routers 10.199.115.1;
+
+subnet 10.199.115.0 netmask 255.255.255.0 {
+    range 10.199.115.2 10.199.115.250;
+
+    host microcloud-sshsrv028 {
+       hardware ethernet 00:11:22:33:44:55;
+       fixed-address 10.199.115.154;
+       }
+
+}
+"""
 
 def main():
     """...main..."""
-    ipv4 = check_ipv4()
-    network_summary(ipv4)
+    ipcidr = raw_input('Enter IPv4/CIDR: ')
+    dnssrv = raw_input('Enter DNS server(s): ')
+    ipv4 = check_ipv4([ipcidr, dnssrv])
+    #network_summary(ipv4)
 
 
 if __name__ == '__main__':
