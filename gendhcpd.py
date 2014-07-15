@@ -6,11 +6,7 @@
 
 #
 #   DEVELOPMENT NOTES:
-#   - assign DNS
 #   - assign domain name
-#   - show default values, let user accept or change
-#      - assign default lease
-#      - assign max lease time 
 #   - assign DHCP range by start and end IP ||
 #     assign DHCP range by number of hosts
 #   - assign static IP's by MAC address
@@ -63,40 +59,93 @@ except ImportError:
     print '\nERROR: You need the module called "ipaddr"!\n'
     sys.exit(1)
 
+"""
+authoritative;
+ddns-update-style none;
+log-facility local7;
+default-lease-time 600;
+max-lease-time 7200;
 
-def check_ipv4(ip_list):
-    """Checks for valid ipv4 addresses. The ip_list should be of len 2. The first index should be
-    a CIDR formatted IP address. The second index should be one or more ipv4 adresses that will be
-    used as DNS servers. The function will extract the plain ipv4 addresses and itterate over them.
-    In the event of one, or more, ipv4 addresses being flagged as invalid the user will be forced to
-    enter that IP address once more. When the function has verified that all ipv4 addresses are
-    valid they are returned from the function in the valid_ip list after the CIDR has been appended
-    as the last index of that list."""
-    # Separate IPv4 and CIDR and add the IPv4 address to the ip_check list
-    ipv4 = ip_list[0].split('/')[0]
-    cidr = ip_list[0].split('/')[1]
-    ip_check = [ipv4]
+option domain-name "internal";
+option domain-name-servers 8.8.8.8;
+option subnet-mask 255.255.255.0;
+option broadcast-address 10.199.115.255;
+option routers 10.199.115.1;
 
-    # Itterate trough the IPv4 addresses in ip_list[1] and appends them to the ip_check list.
-    for dns in ip_list[1].split(' '):
-        ip_check.append(dns)
+subnet 10.199.115.0 netmask 255.255.255.0 {
+    range 10.199.115.2 10.199.115.250;
 
-    count = 0
-    while count < len(ip_check):
-        for check in ip_check:
-            try:
-                ip = ipaddr.ip_address(check)
-                count = count + 1
-            except ValueError:
-                # If ValueError is raised
-                print '[!] - IPv4 {0} is not valid!'.format(check)
-                # Request a valid IPv4 address from the user
-                newip = raw_input('Enter valid IP: ')
-                # and replace the old value with the new IPv4 address before running the loop again
-                ip_check[ip_check.index(check)] = newip
-                count = 0
+    host microcloud-sshsrv028 {
+       hardware ethernet 00:11:22:33:44:55;
+       fixed-address 10.199.115.154;
+       }
 
-    print ip_check
+}
+"""
+def assign_calues():
+    """Assign DHCP values. """
+    valid_ip = []
+
+    while True:
+        ipcidr = raw_input('Enter IPv4/CIDR: ')
+        ipv4 = ipcidr.split('/')[0]
+        cidr = ipcidr.split('/')[1]
+
+        # CIDR cannot be greater than 31
+        if int(cidr) > 31:
+            print 'The CIDR can not be higher than 31'
+
+        # CIDR is less or equal to 31
+        if int(cidr) <= 31:
+            break
+
+    # Setup the IPv4 address for validation
+    check_ips = [ipv4]
+
+    dnssrv = raw_input('Enter DNS server(s): ')
+
+    # Append the DNS server(s) to the check list
+    for dns in dnssrv.split(' '):
+        check_ips.append(dns)
+
+    # Pass the elements in the check list off for validation
+    for ips in check_ips:
+        validip = check_ipv4(ips)
+        # Append the returned IPv4 address to the valid_ip list 
+        valid_ip.append(validip)
+
+    # Get the default-lease-time
+    print '\nDHCP lease settings:'
+    print 'Default values:'
+    print '- default-lease-time:  600'
+    print '- max-lease-time:     7200\n'
+    print 'Press ENTER to keep default settings.\n'
+
+    dltime = raw_input('Default lease time: ')
+
+    if dltime == '':
+        dltime = '600'
+
+    mltime = raw_input('Max lease time: ')
+
+    if mltime == '':
+        mltime = '7200'
+
+    print valid_ip, cidr, dltime, mltime
+
+
+def check_ipv4(ipv4):
+    """Checks for valid ipv4 addresses. """
+    while True:
+        try:
+            ip = ipaddr.ip_address(ipv4)
+            break
+            #count = count + 1
+        except ValueError:
+            print '[!] - IPv4 {0} is not valid!'.format(ipv4)
+            ipv4 = raw_input('Enter a valid IPv4: ')
+
+    return ipv4
 
 
 def network_summary(ipcidr):
@@ -147,36 +196,10 @@ def network_summary(ipcidr):
 
     return netsum
 
-"""
-authoritative;
-ddns-update-style none;
-log-facility local7;
-default-lease-time 600;
-max-lease-time 7200;
-
-option domain-name "internal";
-option domain-name-servers 8.8.8.8;
-option subnet-mask 255.255.255.0;
-option broadcast-address 10.199.115.255;
-option routers 10.199.115.1;
-
-subnet 10.199.115.0 netmask 255.255.255.0 {
-    range 10.199.115.2 10.199.115.250;
-
-    host microcloud-sshsrv028 {
-       hardware ethernet 00:11:22:33:44:55;
-       fixed-address 10.199.115.154;
-       }
-
-}
-"""
 
 def main():
     """...main..."""
-    ipcidr = raw_input('Enter IPv4/CIDR: ')
-    dnssrv = raw_input('Enter DNS server(s): ')
-    ipv4 = check_ipv4([ipcidr, dnssrv])
-    #network_summary(ipv4)
+    assign_calues()
 
 
 if __name__ == '__main__':
