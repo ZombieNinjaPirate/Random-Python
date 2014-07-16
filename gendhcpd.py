@@ -6,8 +6,8 @@
 
 #
 #   DEVELOPMENT NOTES:
-#   - number ip valid ip addresses in the network
 #   - assign DHCP range by start and end IP
+#   - number ip valid ip addresses in the network
 #   - output in dhcpd.conf format
 #   - if user confirms configuration
 #   - write output to file
@@ -288,15 +288,29 @@ def network_summary(dhcp_info):
     print 'ddns-update-style none;'
     print 'log-facility local7;'
     print 'default-lease-time {0};'.format(dhcp_info[2])
-    print 'max-lease-time {0};\n'.format(dhcp_info[2])
+    print 'max-lease-time {0};\n'.format(dhcp_info[3])
 
     print 'option domain-name "{0}";'.format(dhcp_info[4])
-    print 'option domain-name-servers {0};'.format(dhcp_info[1:])
+    print 'option domain-name-servers {0};'.format(', '.join(dhcp_info[0][1:]))
     print 'option subnet-mask {0};'.format(netmask)
     print 'option broadcast-address {0};'.format(brdcast)
-    print 'option routers {0};'.format(brdcast)
+    print 'option routers {0};\n'.format(gateway)
 
-    print 'Network:   {0}'.format(network)
+    print 'subnet {0} netmask {1} {2}'.format(network, netmask, '{')
+    print '\trange 10.199.115.2 10.199.115.250;\n'
+
+    for static in dhcp_info[5]:
+        ipaddress = static.split(' ')[0]
+        macaddres = static.split(' ')[1]
+        hostname = static.split(' ')[2]
+        print '\thost {0}.{1} {2}'.format(hostname, dhcp_info[4], '{')
+        print '\thardware ethernet {0};'.format(macaddres)
+        print '\tfixed-address {0};'.format(ipaddress)
+        print '\t{0}\n'.format('}')
+    
+    print '{0}\n'.format('}')
+
+    print '\n\nNetwork:   {0}'.format(network)
     print 'Gateway:   {0}'.format(gateway)
     print 'First IP:  {0}'.format(firstip)
     print 'Last IP:   {0}'.format(finalip)
@@ -318,31 +332,6 @@ def network_summary(dhcp_info):
             print 'Please enter "Y" for Yes or "N" for No'
 
     return netsum
-
-
-"""
-authoritative;
-ddns-update-style none;
-log-facility local7;
-default-lease-time 600;
-max-lease-time 7200;
-
-option domain-name "internal";
-option domain-name-servers 8.8.8.8;
-option subnet-mask 255.255.255.0;
-option broadcast-address 10.199.115.255;
-option routers 10.199.115.1;
-
-subnet 10.199.115.0 netmask 255.255.255.0 {
-    range 10.199.115.2 10.199.115.250;
-
-    host microcloud-sshsrv028 {
-       hardware ethernet 00:11:22:33:44:55;
-       fixed-address 10.199.115.154;
-       }
-
-}
-"""
 
 
 def main():
