@@ -6,7 +6,6 @@
 
 #
 #   DEVELOPMENT NOTES:
-#   - assign DHCP range by start and end IP
 #   - number ip valid ip addresses in the network
 #   - output in dhcpd.conf format
 #   - if user confirms configuration
@@ -15,7 +14,7 @@
 
 
 """
-   Copyright (c) 2014, Are Hansen
+   Copyright (c) 2014, Are Hansen - Honeypot Development
 
    All rights reserved.
  
@@ -162,37 +161,6 @@ def assign_values():
         if verify != 'Y' and verify != 'N':
             print 'Please enter "Y" for Yes or "N" for No'
 
-    #
-    # Returned objects
-    #
-    # - valid_ip
-    #   Type: list
-    #   - 0: network
-    #   - 1 - * : DNS servers
-    #
-    # - cidr
-    #   Type: str
-    #   - CIDR of the network
-    #
-    # - dltime
-    #   Type: str
-    #   - default-lease-time
-    #
-    # - mltime
-    #   Type: str
-    #   - max-lease-time
-    #
-    # - dname
-    #   Type: str
-    #   - domain-name
-    #
-    # - staticip
-    #   Type: list
-    #   - each element contains three strings separated by a space
-    #   -- str0: ipv4 address
-    #   -- str1: mac address
-    #   -- str2: host name
-    #
     return valid_ip, cidr, dltime, mltime, dname, staticip
 
 
@@ -215,7 +183,6 @@ def check_ipv4(ipv4):
         try:
             ip = ipaddr.ip_address(ipv4)
             break
-            #count = count + 1
         except ValueError:
             print '[!] - IPv4 {0} is not valid!'.format(ipv4)
             ipv4 = raw_input('Enter a valid IPv4: ')
@@ -284,6 +251,19 @@ def network_summary(dhcp_info):
     brdcast = '{0}'.format('.'.join(map(str, broad)))
     netmask = '{0}'.format('.'.join(map(str, mask)))
 
+    print '\nDHCP range:'
+    print 'Starting IP address: {0}'.format(firstip)
+    print 'Ending IP address:   {0}\n'.format(finalip)
+    # Get start range
+    startrange = raw_input('- Enter starting IP address: ')
+    # and make sure its a valid IPv4 address.
+    valid_start = check_ipv4(startrange)
+
+    # Get end range
+    endrange = raw_input('- Enter ending IP address: ')
+    # and make sure its a valid IPv4 address.
+    valid_end = check_ipv4(endrange)
+    
     print 'authoritative;'
     print 'ddns-update-style none;'
     print 'log-facility local7;'
@@ -297,7 +277,7 @@ def network_summary(dhcp_info):
     print 'option routers {0};\n'.format(gateway)
 
     print 'subnet {0} netmask {1} {2}'.format(network, netmask, '{')
-    print '\trange 10.199.115.2 10.199.115.250;\n'
+    print '\trange {0} {1};\n'.format(valid_start, valid_end)
 
     for static in dhcp_info[5]:
         ipaddress = static.split(' ')[0]
@@ -309,13 +289,6 @@ def network_summary(dhcp_info):
         print '\t{0}\n'.format('}')
     
     print '{0}\n'.format('}')
-
-    print '\n\nNetwork:   {0}'.format(network)
-    print 'Gateway:   {0}'.format(gateway)
-    print 'First IP:  {0}'.format(firstip)
-    print 'Last IP:   {0}'.format(finalip)
-    print 'Broadcast: {0}'.format(brdcast)
-    print 'Netmask:   {0}'.format(netmask)
 
     while True:
         verify = raw_input('\nIs this the correct network settings? Y/N ')
