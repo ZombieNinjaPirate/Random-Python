@@ -4,15 +4,6 @@
 """Generate the dhcpd.conf file. """
 
 
-#
-#   DEVELOPMENT NOTES:
-#   - number ip valid ip addresses in the network
-#   - output in dhcpd.conf format
-#   - if user confirms configuration
-#   - write output to file
-#
-
-
 """
    Copyright (c) 2014, Are Hansen - Honeypot Development
 
@@ -42,7 +33,7 @@
 
 __author__ = 'Are Hansen'
 __date__ = '2014, July 14'
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 
 import os
@@ -311,10 +302,19 @@ def network_summary(dhcp_info):
     return dhcpd_conf
 
 
+def write_dhcpd(dhcpd_values):
+    """Writes the assigned values to the new dhcpd.conf. """
+    dhcpd_file = 'dhcpd.config.NEW'
+    for values in dhcpd_values:
+        with open(dhcpd_file, 'a') as config:
+            config.write('{0}\n'.format(values))
+
+
 def main():
     """...main..."""
     info = assign_values()
-    network_summary(info)
+    dhcpd_config = network_summary(info)
+    write_dhcpd(dhcpd_config)
 
 
 if __name__ == '__main__':
