@@ -263,38 +263,42 @@ def network_summary(dhcp_info):
     endrange = raw_input('- Enter ending IP address: ')
     # and make sure its a valid IPv4 address.
     valid_end = check_ipv4(endrange)
-    
-    print 'authoritative;'
-    print 'ddns-update-style none;'
-    print 'log-facility local7;'
-    print 'default-lease-time {0};'.format(dhcp_info[2])
-    print 'max-lease-time {0};\n'.format(dhcp_info[3])
 
-    print 'option domain-name "{0}";'.format(dhcp_info[4])
-    print 'option domain-name-servers {0};'.format(', '.join(dhcp_info[0][1:]))
-    print 'option subnet-mask {0};'.format(netmask)
-    print 'option broadcast-address {0};'.format(brdcast)
-    print 'option routers {0};\n'.format(gateway)
-
-    print 'subnet {0} netmask {1} {2}'.format(network, netmask, '{')
-    print '\trange {0} {1};\n'.format(valid_start, valid_end)
+    # Append all the configuration details to the dhcpd_conf list.
+    dhcpd_conf = []
+    dhcpd_conf.append('authoritative;')
+    dhcpd_conf.append('ddns-update-style none;')
+    dhcpd_conf.append('log-facility local7;')
+    dhcpd_conf.append('default-lease-time {0};'.format(dhcp_info[2]))
+    dhcpd_conf.append('max-lease-time {0};\n'.format(dhcp_info[3]))
+    dhcpd_conf.append('option domain-name "{0}";'.format(dhcp_info[4]))
+    dhcpd_conf.append('option domain-name-servers {0};'.format(', '.join(dhcp_info[0][1:])))
+    dhcpd_conf.append('option subnet-mask {0};'.format(netmask))
+    dhcpd_conf.append('option broadcast-address {0};'.format(brdcast))
+    dhcpd_conf.append('option routers {0};\n'.format(gateway))
+    dhcpd_conf.append('subnet {0} netmask {1} {2}'.format(network, netmask, '{'))
+    dhcpd_conf.append('\trange {0} {1};\n'.format(valid_start, valid_end))
 
     for static in dhcp_info[5]:
         ipaddress = static.split(' ')[0]
         macaddres = static.split(' ')[1]
         hostname = static.split(' ')[2]
-        print '\thost {0}.{1} {2}'.format(hostname, dhcp_info[4], '{')
-        print '\thardware ethernet {0};'.format(macaddres)
-        print '\tfixed-address {0};'.format(ipaddress)
-        print '\t{0}\n'.format('}')
+        dhcpd_conf.append('\thost {0}.{1} {2}'.format(hostname, dhcp_info[4], '{'))
+        dhcpd_conf.append('\thardware ethernet {0};'.format(macaddres))
+        dhcpd_conf.append('\tfixed-address {0};'.format(ipaddress))
+        dhcpd_conf.append('\t{0}\n'.format('}'))
     
-    print '{0}\n'.format('}')
+    dhcpd_conf.append('{0}\n'.format('}'))
+
+    print '\nThis is what your new dhcpd.conf will look like:\n'
+
+    for line in dhcpd_conf:
+        print line
 
     while True:
         verify = raw_input('\nIs this the correct network settings? Y/N ')
 
         if verify == 'Y':
-            netsum = [network, gateway, firstip, finalip, brdcast, netmask]
             break
 
         if verify == 'N':
@@ -304,7 +308,7 @@ def network_summary(dhcp_info):
         if verify != 'Y' and verify != 'N':
             print 'Please enter "Y" for Yes or "N" for No'
 
-    return netsum
+    return dhcpd_conf
 
 
 def main():
