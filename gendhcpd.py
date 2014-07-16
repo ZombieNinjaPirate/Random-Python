@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 
-"""Generate the dhcpd.conf file. """
+"""Generates a dhcpd.conf file. This script is intended to be used on the Bifrozt honeypot router,
+http://sourceforge.net/projects/bifrozt/, but can be used to generate a dhcpd.conf file for any
+system that can use a standard dhcpd.conf file."""
 
 
 """
@@ -50,9 +52,19 @@ def assign_values():
     """Assign DHCP values. """
     print '\nNetwork configuration\n'
     while True:
+        #
+        #   Add check to veryfy that
+        #   1) the IPv4 address ends with zero
+        #
         ipcidr = raw_input('- Enter IPv4/CIDR: ')
         ipv4 = ipcidr.split('/')[0]
-        cidr = ipcidr.split('/')[1]
+
+        # Call sys.exit(1) if CIDR is excluded.
+        try:
+            cidr = ipcidr.split('/')[1]
+        except IndexError:
+            print 'ERROR: You did not assign CIDR (ip.add.ress/CIDR)'
+            sys.exit(1)
 
         # CIDR cannot be greater than 31
         if int(cidr) > 31:
@@ -85,7 +97,7 @@ def assign_values():
     print 'Default values:'
     print 'default-lease-time:  600'
     print 'max-lease-time:     7200'
-    print 'Press ENTER to keep default settings.\n'
+    print 'Press [ENTER] tngs.\n'
 
     # Get default-lease-time
     dltime = raw_input('- Default lease time: ')
@@ -100,6 +112,7 @@ def assign_values():
         mltime = '7200'
 
     # Get domain-name.
+    print '\nInternal domain name'
     while True:
         dname = raw_input('- Domain name: ')
 
