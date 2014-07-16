@@ -52,31 +52,38 @@ def assign_values():
     """Assign DHCP values. """
     print '\nNetwork configuration\n'
     while True:
-        #
-        #   Add check to veryfy that
-        #   1) the IPv4 address ends with zero
-        #
+        # Get IPv4 and CIDR
         ipcidr = raw_input('- Enter IPv4/CIDR: ')
+
+        # extract the IPv4.
         ipv4 = ipcidr.split('/')[0]
+
+        # Make sure the last octet is 0.
+        octets = ipv4.split('.')
+        if octets[-1] != '0':
+            octets[-1] = '0'
+            ipv4 = '.'.join(octets) 
 
         # Call sys.exit(1) if CIDR is excluded.
         try:
+            # Extract CIDR here.
             cidr = ipcidr.split('/')[1]
         except IndexError:
-            print 'ERROR: You did not assign CIDR (ip.add.ress/CIDR)'
+            print '\nERROR: You did not assign CIDR!\n'
             sys.exit(1)
 
-        # CIDR cannot be greater than 31
+        # CIDR cannot be greater than 31.
         if int(cidr) > 31:
             print 'The CIDR can not be higher than 31'
 
-        # CIDR is less or equal to 31
+        # CIDR is less or equal to 31.
         if int(cidr) <= 31:
             break
 
-    # Setup the IPv4 address for validation
+    # Setup the IPv4 address for validation.
     check_ips = [ipv4]
 
+    # Get the DNS servers.
     print '\nDNS Servers:'
     print 'Multiple DNS servers as space separated list'
     dnssrv = raw_input('- Enter DNS server(s): ')
@@ -116,6 +123,7 @@ def assign_values():
     while True:
         dname = raw_input('- Domain name: ')
 
+        # Domain name should be two characters or more.
         if len(dname) < 2:
             print 'You have to enter a longer doamin name!'
 
@@ -141,6 +149,7 @@ def assign_values():
         while True:
             host_name = raw_input('- Host name: ')
 
+            # Host name should be three characters or more.
             if len(host_name) < 3:
                 print 'The host name must be longer!'
 
@@ -153,7 +162,6 @@ def assign_values():
         #
         staticip.append('{0} {1} {2}'.format(valid_host_ip, valid_host_mac, valid_host_name))
 
-        print staticip
         verify = raw_input('\nAdd another static IPv4 address? Y/N ')
 
         if verify == 'Y':
@@ -196,41 +204,33 @@ def check_ipv4(ipv4):
 
 def network_summary(dhcp_info):
     """ Processes the tuple thats returned from the assign_values function. The tuple contain six
-    elements. This is a reference of those elements:
+    elements.
 
-    dhcp_info[0]
-        - valid_ip
-          Type: list
-          - 0: network
+    This is a reference of those elements:
+
+    dhcp_info[0]                    dhcp_info[1]
+        - valid_ip                      - cidr
+          Type: list                    Type: str
+          - 0: network                  - CIDR of the network
           - 1 - * : DNS servers
 
-    dhcp_info[1]
-        - cidr
-          Type: str
-          - CIDR of the network
+    dhcp_info[2]                    dhcp_info[3]
+        - dltime                        - mltime
+          Type: str                     Type: str
+          - default-lease-time          - max-lease-time
 
-    dhcp_info[2]
-        - dltime
-          Type: str
-          - default-lease-time
-
-    dhcp_info[3]
-        - mltime
-          Type: str
-          - max-lease-time
-
-    dhcp_info[4]
-        - dname
-          Type: str
-          - domain-name
-
-    dhcp_info[5]
-        - staticip
-          Type: list
-          - each element contains three strings separated by a space
-          -- str0: ipv4 address
-          -- str1: mac address
-          -- str2: host name
+    dhcp_info[4]                    dhcp_info[5]
+        - dname                         - staticip
+          Type: str                     Type: list
+          - domain-name                 - each element contains three strings separated by a space
+                                        -- str0: ipv4 address
+                                        -- str1: mac address
+                                        -- str2: host name
+    
+    The function will use these elements to get all the required values for the dhcpd.conf file.
+    All the values will be appended to the dhcpd_conf list before its displayed to the user.
+    The function will return the dhcpd_conf list if the user confirms the values to be correct. The
+    entire script will be restarted if the user disaproves of the displayed values.
     """
     addr = dhcp_info[0][0].split('.')
     cidr = int(dhcp_info[1])
