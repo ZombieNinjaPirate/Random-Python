@@ -35,11 +35,12 @@ system that can use a standard dhcpd.conf file."""
 
 __author__ = 'Are Hansen'
 __date__ = '2014, July 14'
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 
 
 import os
 import sys
+import time
 import re
 try:
     import ipaddr
@@ -109,12 +110,14 @@ def assign_values():
     # Get default-lease-time
     dltime = raw_input('- Default lease time: ')
 
+    # Set default if len zero
     if len(dltime) == 0:
         dltime = '600'
 
     # Get max-lease-time
     mltime = raw_input('- Max lease time: ')
 
+    # Set default if len zero
     if len(mltime) == 0:
         mltime = '7200'
 
@@ -130,8 +133,8 @@ def assign_values():
         if len(dname) >= 2:
             break
 
-    staticip = []
     # Get static IPv4 and MAC address
+    staticip = []
     print '\nStatic IPv4 addresse(s):'
     while True:
         # Get static IPv4 address,
@@ -139,15 +142,27 @@ def assign_values():
         # validate IPv4.
         valid_host_ip = check_ipv4(host_ip) 
 
-        # Get MAC address of static host,
+        # Check for previously used IPv4.
+        if len(staticip) > 0:
+            valid_host_ip = check_usedvar(valid_host_ip, staticip, 'ipv4')
+
+        # Get MAC address of static host.
         host_mac = raw_input('- MAC: ')
         # validate MAC address.
         valid_host_mac = check_mac(host_mac)
+
+        # Check for previously used MAC address.
+        if len(staticip) > 0:
+            valid_host_mac = check_usedvar(valid_host_mac, staticip, 'mac')
 
         # Get host name of static host
         valid_host_name = ''
         while True:
             host_name = raw_input('- Host name: ')
+
+            # Check for previously used host names.
+            if len(staticip) > 0:
+                host_name = check_usedvar(host_name, staticip, 'hostname')
 
             # Host name should be three characters or more.
             if len(host_name) < 3:
@@ -157,23 +172,63 @@ def assign_values():
                 valid_host_name = host_name
                 break
 
-        #
-        #   CHECK FOR PREVIOUSLY USED IP AND MAC ADDRESSES
-        #
+        # Append unique values to the staticip list
         staticip.append('{0} {1} {2}'.format(valid_host_ip, valid_host_mac, valid_host_name))
 
+        # Await user input.
         verify = raw_input('\nAdd another static IPv4 address? Y/N ')
 
+        # Restart loop to add additional static IP configuration
         if verify == 'Y':
             pass
 
+        # or break to return values from function.
         if verify == 'N':
             break
 
+        # Catch all invalid input.
         if verify != 'Y' and verify != 'N':
             print 'Please enter "Y" for Yes or "N" for No'
 
     return valid_ip, cidr, dltime, mltime, dname, staticip
+
+
+def check_usedvar(str_item, list_item, fid):
+    """Check if str_item is already in use in list_item. """
+    while True:
+        # Check for used IPv4 address.
+        if fid == 'ipv4':
+            for item in list_item:
+                if str_item == item.split(' ')[0]:
+                    print 'You have already used {0}'.format(str_item)
+                    host_ip = raw_input('- IPv4: ')
+                    str_item = check_ipv4(host_ip)
+
+            if not re.match(str_item, item):
+                break
+
+        if fid == 'mac':
+            # Check for used MAC address.
+            for item in list_item:
+                if str_item == item.split(' ')[1]:
+                    print 'You have already used {0}'.format(str_item)
+                    host_mac = raw_input('- MAC: ')
+                    str_item = check_mac(host_mac)
+
+            if not re.match(str_item, item):
+                break
+
+        if fid == 'hostname':
+            # Check for used host name.
+            for item in list_item:
+                if str_item == item.split(' ')[2]:
+                    print 'You have already used {0}'.format(str_item)
+                    str_item = raw_input('- Host name: ')
+
+            if not re.match(str_item, item):
+                break
+
+    return str_item
 
 
 def check_mac(macadd):
@@ -232,22 +287,28 @@ def network_summary(dhcp_info):
     The function will return the dhcpd_conf list if the user confirms the values to be correct. The
     entire script will be restarted if the user disaproves of the displayed values.
     """
+    # Split address into octets.
     addr = dhcp_info[0][0].split('.')
+    # Turn CIDR into int.
     cidr = int(dhcp_info[1])
 
+    # Initialize the netmask and calculate based on CIDR mask.
     mask = [0, 0, 0, 0]
     for i in range(cidr):
         mask[i/8] = mask[i/8] + (1 << (7 - i % 8))
 
+    # Initialize net and binary and netmask with addr to get network.
     net = []
     for i in range(4):
         net.append(int(addr[i]) & mask[i])
 
+    # Duplicate net into broad array, gather host bits, and generate broadcast.
     broad = list(net)
     brange = 32 - cidr
     for i in range(brange):
         broad[3 - i/8] = broad[3 - i/8] + (1 << (i % 8))
 
+    # Declare the variabeles for the network.
     network = '.'.join(map(str, net))
     gateway = '{0}.1'.format('.'.join(map(str, net[0:3])))
     firstip = '{0}.2'.format('.'.join(map(str, net[0:3])))
@@ -283,6 +344,7 @@ def network_summary(dhcp_info):
     dhcpd_conf.append('subnet {0} netmask {1} {2}'.format(network, netmask, '{'))
     dhcpd_conf.append('\trange {0} {1};\n'.format(valid_start, valid_end))
 
+    # Create static host declarations and append to dhcpd_conf list.
     for static in dhcp_info[5]:
         ipaddress = static.split(' ')[0]
         macaddres = static.split(' ')[1]
@@ -294,21 +356,26 @@ def network_summary(dhcp_info):
     
     dhcpd_conf.append('{0}\n'.format('}'))
 
+    # Present the dhcpd.conf file to the user
     print '\nThis is what your new dhcpd.conf will look like:\n'
 
     for line in dhcpd_conf:
         print line
 
+    # Hold for user confirmation to
     while True:
         verify = raw_input('\nIs this the correct network settings? Y/N ')
 
+        # break loop and return dhcpd_conf from function
         if verify == 'Y':
             break
 
+        # or, if configuration is declined, restart the script.
         if verify == 'N':
             python = sys.executable
             os.execl(python, python, * sys.argv)
 
+        # Catch all invalid inputs.
         if verify != 'Y' and verify != 'N':
             print 'Please enter "Y" for Yes or "N" for No'
 
@@ -317,7 +384,7 @@ def network_summary(dhcp_info):
 
 def write_dhcpd(dhcpd_values):
     """Writes the assigned values to the new dhcpd.conf. """
-    dhcpd_file = 'dhcpd.config.NEW'
+    dhcpd_file = 'dhcpd.config.{0}'.format(time.strftime('%y%m%d%H%M%S'))
     for values in dhcpd_values:
         with open(dhcpd_file, 'a') as config:
             config.write('{0}\n'.format(values))
