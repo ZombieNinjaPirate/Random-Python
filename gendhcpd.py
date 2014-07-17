@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 
 """Generates a dhcpd.conf file. This script is intended to be used on the Bifrozt honeypot router,
