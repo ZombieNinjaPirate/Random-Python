@@ -384,7 +384,7 @@ def network_summary(dhcp_info):
 
 def write_dhcpd(dhcpd_values):
     """Writes the assigned values to the new dhcpd.conf. """
-    dhcpd_file = 'dhcpd.config.{0}'.format(time.strftime('%y%m%d%H%M%S'))
+    dhcpd_file = 'dhcpd.conf.{0}'.format(time.strftime('%y%m%d%H%M%S'))
     for values in dhcpd_values:
         with open(dhcpd_file, 'a') as config:
             config.write('{0}\n'.format(values))
