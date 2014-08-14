@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
+"""A Python wrapper for the vmbuilder script thats used to build KVM guests. """
+
+
 """
    Copyright (c) 2013, Are Hansen
 
@@ -37,6 +40,7 @@ __version__ = '1.0.4'
 import argparse
 import os
 import time
+import random
 import sys
 
 
@@ -58,7 +62,47 @@ def parse_args():
     return args
 
 
-def build_kvm(kvm_name, kvm_tmplt, kvm_dst, kvm_ip):
+def make_macadd():
+    """Create a legit MAC address from a known vendor and make a random choice from those MAC
+    addresses and return that choice. """
+    mac1 = [ 0x00, 0x0e, 0x8b,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+
+    mac2 = [ 0x00, 0x16, 0x3e,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+
+    mac3 = [ 0x00, 0x1f, 0xfe,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+
+    mac4 = [ 0x00, 0x26, 0x21,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+    
+    mac4 = [ 0x38, 0x46, 0x9a,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+
+    mac5 = [ 0x00, 0x00, 0x01,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+
+    mac_list = [ mac1, mac2, mac3, mac4, mac5 ]
+
+    mac = random.choice(mac_list)
+    
+    return ':'.join(map(lambda x: "%02x" % x, mac))
+
+
+def build_kvm(kvm_name, kvm_tmplt, kvm_dst, kvm_ip, kvm_mac):
     """Builds the KVM. """
     kvm_dest = '{0}/{1}'.format(kvm_dst, kvm_name)
     template_bot = '{0}/boot.sh'.format(kvm_tmplt)
@@ -102,17 +146,16 @@ def build_kvm(kvm_name, kvm_tmplt, kvm_dst, kvm_ip):
     print '[+] - Environment looks to be okay, lets try building this then...'
 
     vmbuilder = '/usr/bin/vmbuilder kvm ubuntu -o -v'
-    kvm_cfigs = '-c {0} --part {1} --hostname {2} --ip {3} -d {4}'.format(template_cfg,
-                                                                          template_prt,
-                                                                          kvm_name,
-                                                                          kvm_ip,
-                                                                          kvm_dest)
+    kvm_cfigs = '-c {0} --part {1} --hostname {2} --ip {3} -d {4} --mac {5}'.format(template_cfg,
+                template_prt, kvm_name, kvm_ip, kvm_dest, kvm_mac)
+
     build_kvm = '{0} {1}'.format(vmbuilder, kvm_cfigs)
+    
     try:
         os.system(build_kvm)
     except VMBuilder.exception, e:
-	print 'ERROR: {0}'.format(e)
-	sys.exit(1)
+        print 'ERROR: {0}'.format(e)
+        sys.exit(1)
 
     end = time.time()
     build_time = end - start
@@ -134,8 +177,10 @@ def process_args(args):
     name = args.name
     template = args.template
 
+    macaddrs = make_macadd()
+
     if os.getuid() == 0:
-        build_kvm(name, template, dest, ip)
+        build_kvm(name, template, dest, ip, macaddrs)
     elif os.getuid() != 0:
         print 'ERROR: You must be root to run this script!!'
         sys.exit(1)
