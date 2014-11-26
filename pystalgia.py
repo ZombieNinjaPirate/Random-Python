@@ -37,13 +37,12 @@ WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH 
 
 #   DEV NOTES
 #
-#   - 20141018: Upper limit for Logstalgia lines per second capabillities.
-#   Logstalgia does does not handle massive amounts of traffic very well. When Bifrozt
-#   blocks an outbound DDoS attack it can generate 80.0000 log entries per second in
-#   average.
-#   WORKAROUND: When parsing firewall.log, check for the number of entries per second.
-#   If entries per second exceeds 700, ignore the preceeding lines containing the same
-#   time stamp per second.
+#   - 20141126: Command line options
+#       - input file
+#       - output file
+#       - maximum number of similar lines/second (default: 650)
+#       - blocked traffic tag (defailt: BLOCK)
+#       - allowed traffic tag (defailt: ALLOW)
 #
 #   - 20141126: Replace non-rfc1918 addresses with country names.
 #   Use the geoip database to replace any non-rfc1918 address with its country name.
@@ -52,60 +51,119 @@ WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH 
 
 __autor__ = 'Are Hansen'
 __date__ = '2014, October 10'
-__version__ = 'DEV 0.0.1'
+__version__ = 'DEV 0.0.2'
 
 
+import argparse
 import sys
 
-newlog = []
-loglines = []
+
+def parse_args():
+    """Command line options."""
+    parser = argparse.ArgumentParser(description='''Make iptables logs compatible with 
+                                                    Logstalgia.''')
+
+    files = parser.add_argument_group('- Files')
+    files.add_argument('-I', dest='fwlog', help='Firewall log', required=True)
+    files.add_argument('-O', dest='outfile', help='Output file', required=True)
+
+    config = parser.add_argument_group('- Configuration options')
+    config.add_argument('-N', dest='linesec', help='Number of similar lines per second')
+
+    args = parser.parse_args()
+    
+    return args
 
 
-# Reads the lines from whatever file sys.argv[1] points to,
-with open(sys.argv[1], 'r') as lines:
-    for line in lines.readlines():
-        # create a list object of each line and appends that list object to loglines.
-        loglines.append(line.rstrip().split())
+def readLog(fwlog):
+    """Read the firewall log, remove any NULL value indexes and return it as a list 
+    object. """
+    newlog = []
+    loglines = []
+    
+    with open(fwlog, 'r') as lines:
+        for line in lines.readlines():
+            loglines.append(line.rstrip().split())
 
-# Remove any NULL value indexes from the loglines list, creating the newlog list object. 
-newlog = filter(None, loglines)
+    newlog = filter(None, loglines)
 
-# Itterate over the newlog list object and extract the data thats used for building a 
-# Lostalgic formatted log file.
-for log in newlog:
+    return newlog
 
-    # Time stamp format
-    date = '[{0}/{1}/2014:{2} +0200]'.format(log[1], log[0], log[2])
 
-    # Check for certain tag words in the list indexes
-    for tag in log:
+def makeNewlog(loglines, outputfile, linesec):
+    """Convert the firewall lines into a format thats accepted by Logstalgia. """
+    lprsec = []
 
-        # Find what action was preformed.
-        if 'ALLOW' in tag:
-            # If the index contains the ALLOW string, set action = 2
-            act = '2'
+    for log in loglines:
+        # Time stamp format
+        date = '[{0}/{1}/2014:{2} +0000]'.format(log[1], log[0], log[2])
 
-        if 'BLOCK' in tag:
-            # If the index contains the BLOCK string, set action = 1
-            act = '1'
+        if len(lprsec) == 0:
+            lprsec.append(date)
 
-        # Find the source and destination.
-        if 'SRC=' in tag:
-            src = tag.split('=')[1]
+        if len(lprsec) > 0:
+            if date in lprsec:
+                lprsec.append(date)
 
-        if 'DST=' in tag:
-            dst = tag.split('=')[1]
+            if date not in lprsec:
+                lprsec = []
+                print '---'
+                lprsec.append(date)
 
-        # Find the protocol thats used.
-        if 'PROTO=' in tag:
-            prt = tag.split('=')[1]
+        # Check for certain tag words in the list indexes
+        for tag in log:
 
-        # Find the destination port.
-        if 'DPT' in tag:
-            dpt = tag.split('=')[1]
+            # Find what action was preformed.
+            if 'ALLOW' in tag:
+                # If the index contains the ALLOW string, set action = 2
+                act = '2'
 
-    # Construct the "access.log" like line using the data from the list indexes.
-    print '{0} - - {1} "GET {3}{4} {2}" {5} {2}'.format(src, date, act, prt, dpt, dst)
+            if 'BLOCK' in tag:
+                # If the index contains the BLOCK string, set action = 1
+                act = '1'
+
+            # Find the source and destination.
+            if 'SRC=' in tag:
+                src = tag.split('=')[1]
+
+            if 'DST=' in tag:
+                dst = tag.split('=')[1]
+
+            # Find the protocol thats used.
+            if 'PROTO=' in tag:
+                prt = tag.split('=')[1]
+
+            # Find the destination port.
+            if 'DPT' in tag:
+                dpt = tag.split('=')[1]
+
+        if len(lprsec) < int(linesec):
+            # Construct the "access.log" like line using the data from the list indexes.
+            str1 = '{0} - - {1} "GET {2}{3}'.format(src, date, prt, dpt)
+            str2 = '{0}" {1} {0}'.format(act, dst)
+
+            with open(outputfile, 'a') as outfile:
+                outfile.write('{0} {1}\n'.format(str1, str2))
+                print len(linesec)
+
+
+def process_args(args):
+    """Process the command line options. """
+    if not args.linesec:
+        args.linesec = 650
+
+    logdata = readLog(args.fwlog)
+    makelog = makeNewlog(logdata, args.outfile, args.linesec)
+
+
+def main():
+    """Main function. """
+    args = parse_args()
+    process_args(args)
+
+
+if __name__ == '__main__':
+    main()
 
 
 """
