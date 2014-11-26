@@ -82,10 +82,12 @@ for log in newlog:
 
         # Find what action was preformed.
         if 'ALLOW' in tag:
-            act = 'ACCEPT'
+            # If the index contains the ALLOW string, set action = 2
+            act = '2'
 
         if 'BLOCK' in tag:
-            act = 'BLOCK'
+            # If the index contains the BLOCK string, set action = 1
+            act = '1'
 
         # Find the source and destination.
         if 'SRC=' in tag:
@@ -103,13 +105,12 @@ for log in newlog:
             dpt = tag.split('=')[1]
 
     # Construct the "access.log" like line using the data from the list indexes.
-    print '{0} - - {1} "GET {3}{4}-{2} {2}" {5} 200'.format(src, date, act, prt, dpt, dst)
+    print '{0} - - {1} "GET {3}{4} {2}" {5} {2}'.format(src, date, act, prt, dpt, dst)
 
 
 """
 This is the command used by logstalgia when reading the log file:
 
-logstalgia -u 1 1280x800 -f --glow-duration 1.0 --hide-paddle -s 5 \
--g " ,ACCEPT,49,00FF00" -g " ,BLOCK,49,FF0000" --glow-duration 1.0 \
---glow-multiplier 2.3 --font-size 14 -x LOGFILE
+logstalgia 1280x800 -f -x --glow-duration 0.9 --font-size 14 --hide-paddle \
+--disable-progress -g " ,CODE=^2,49,00FF00" -g " ,CODE=^1,49,FF0000" -s 7 -u 1 LOGFILE
 """
