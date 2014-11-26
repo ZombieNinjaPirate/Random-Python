@@ -45,6 +45,9 @@ WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH 
 #   If entries per second exceeds 700, ignore the preceeding lines containing the same
 #   time stamp per second.
 #
+#   - 20141126: Replace non-rfc1918 addresses with country names.
+#   Use the geoip database to replace any non-rfc1918 address with its country name.
+#
 
 
 __autor__ = 'Are Hansen'
