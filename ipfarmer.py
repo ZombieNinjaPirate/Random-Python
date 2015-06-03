@@ -28,13 +28,59 @@ THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
+import argparse
+import os
+import re
+import sys
+import urllib2
+
+
+__app__ = sys.argv[0].split('/')[-1].split('.')[-2]
 __author__ = 'Are Hansen'
 __date__ = '2015, June 2'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 
-import re
-import urllib2
+
+def parse_args():
+    """Command line options."""
+    parser = argparse.ArgumentParser(
+             description='{0} - v{1}, {2} - {3}\n'.format(__app__, __version__, __date__, __author__)
+             )
+
+    src = parser.add_argument_group('- Target source')
+    trg = src.add_mutually_exclusive_group(required=True)
+    trg.add_argument(
+                     '-U', 
+                     dest='url', 
+                     help='URL to page containing IPv4 objects',
+                     nargs=1 
+                     )
+    trg.add_argument(
+                     '-F',
+                     dest='ipfile',
+                     help='File containing IPv4 objects',
+                     nargs='?',
+                     type=argparse.FileType('r')
+                     )
+
+    atk = parser.add_argument_group('- Offensive options')
+    atk.add_argument(
+                     '-s',
+                     dest='nmap',
+                     help='Scan IPv4 objects with Nmap',
+                     action='store_true'
+                     )
+    atk.add_argument(
+                     '-b',
+                     dest='bf',
+                     help='File format Password:Username. Used against open SSH ports',
+                     nargs='?',
+                     type=argparse.FileType('r')
+                     )
+
+    args = parser.parse_args()    
+    return args
 
 
 def getTargets(gurl):
@@ -48,4 +94,17 @@ def getTargets(gurl):
         ipv4 = re.findall( r'[0-9]+(?:\.[0-9]+){3}', page)
         return ipv4
     except urllib2.URLError, err:
-         err
+         return err
+
+def process_args(args):
+    """Parse and check the arguments. """
+
+
+def main():
+    """The main brain... """
+    args = parse_args()
+    process_args(args)
+
+
+if __name__ == '__main__':
+    main()
